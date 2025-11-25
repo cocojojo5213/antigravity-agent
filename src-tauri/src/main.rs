@@ -12,6 +12,7 @@ mod constants;
 mod config_manager;
 mod app_settings;
 mod utils;
+mod language_server;
 
 mod db_monitor;
 mod commands;
@@ -100,6 +101,8 @@ fn main() {
             encrypt_config_data,
             write_text_file,
             write_frontend_log,
+            // Antigravity 语言服务器接口
+            language_server_get_user_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
