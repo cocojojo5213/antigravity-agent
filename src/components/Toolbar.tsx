@@ -7,7 +7,6 @@ import {TooltipProvider} from './ui/tooltip';
 import ToolbarTitle from './ui/toolbar-title';
 import {useUpdateChecker} from '../hooks/useUpdateChecker';
 import {useUserManagement} from '@/modules/user-management/store';
-import {useDbMonitoringStore} from "@/modules/db-monitoring-store.ts";
 import {useAntigravityIsRunning} from '@/hooks/useAntigravityIsRunning';
 import { invoke } from '@tauri-apps/api/core';
 import {AccountCommands} from "@/commands/AccountCommands.ts";
@@ -47,12 +46,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
   showStatus,
   onSettingsClick
 }) => {
-  const {users, addCurrentUser} = useUserManagement();
-  const {dbMonitoringEnabled} = useDbMonitoringStore();
+  const {users} = useUserManagement();
   
   // Antigravity 进程状态
   const isRunning = useAntigravityIsRunning((state) => state.isRunning);
-  const isCheckingStatus = useAntigravityIsRunning((state) => state.isChecking);
 
   // 确认对话框状态（用于"登录新账户"操作）
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -173,36 +170,12 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 className="ml-2 p-2"
                 title={isRunning ? 'Antigravity 正在运行' : 'Antigravity 未运行'}
               >
-                {isCheckingStatus ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
-                ) : isRunning ? (
+                {isRunning ? (
                   <Play className="w-4 h-4 text-green-500 fill-green-500" />
                 ) : (
                   <Square className="w-4 h-4 text-red-500 fill-red-500" />
                 )}
               </div>
-
-              {/* 添加当前用户按钮 */}
-              <button
-                onClick={async () => {
-                  try {
-                    await addCurrentUser();
-                    showStatus('已添加当前用户', false);
-                  } catch (error) {
-                    showStatus(`添加当前用户失败: ${error}`, true);
-                  }
-                }}
-                className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                title={dbMonitoringEnabled ? "数据库监控中 - 添加当前用户" : "添加当前用户"}
-              >
-                <RefreshCw
-                  className={`w-3 h-3 ${dbMonitoringEnabled ? 'animate-spin' : ''}`}
-                  style={dbMonitoringEnabled ? {
-                    animationDuration: '2s'
-                  } : {}}
-                />
-              </button>
-
             </div>
 
             <div className="flex items-center gap-2">

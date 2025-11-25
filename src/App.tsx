@@ -60,11 +60,14 @@ function AppContent() {
   const { addCurrentUser } = useUserManagement();
 
   // 监听数据库变化事件
-  const { loadSettings, addListener } = useDbMonitoringStore();
+  const { initializeMonitoring, addListener } = useDbMonitoringStore();
 
   useEffect(() => {
-    loadSettings()
-    return addListener(DATABASE_EVENTS.DATA_CHANGED, addCurrentUser)
+    // 初始化监控（自动启动）
+    initializeMonitoring();
+
+    // 添加事件监听器
+    return addListener(DATABASE_EVENTS.DATA_CHANGED, addCurrentUser);
   }, []);
 
   // 启动 Antigravity 进程状态自动检查

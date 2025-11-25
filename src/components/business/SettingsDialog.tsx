@@ -33,10 +33,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
   const [messageType, setMessageType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
   const [appVersion, setAppVersion] = useState<string>('');
 
-  // 监控设置状态
-  const [isDbMonitoringEnabled, setIsDbMonitoringEnabled] = useState(true);
-  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
-
+  
   // 系统托盘状态
   const [isSystemTrayEnabled, setIsSystemTrayEnabled] = useState(true);
   const [isTrayLoading, setIsTrayLoading] = useState(false);
@@ -48,7 +45,6 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadCurrentPaths();
-      loadCurrentSettings();
       loadSystemTraySettings();
       loadSilentStartSettings();
       loadAppVersion();
@@ -104,33 +100,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
     }
   };
 
-  const loadCurrentSettings = async () => {
-    setIsSettingsLoading(true);
-    try {
-      const dbMonitoringEnabled = await invoke<boolean>('is_db_monitoring_enabled');
-      setIsDbMonitoringEnabled(dbMonitoringEnabled);
-    } catch (error) {
-      logger.error('加载设置失败', {
-        module: 'SettingsDialog',
-        action: 'load_settings_failed',
-        error: error instanceof Error ? error.message : String(error)
-      });
-      setIsDbMonitoringEnabled(true);
-    } finally {
-      setIsSettingsLoading(false);
-    }
-  };
-
-  const handleDbMonitoringToggle = async (enabled: boolean) => {
-    try {
-      const result = await invoke<string>('save_db_monitoring_state', { enabled });
-      setIsDbMonitoringEnabled(enabled);
-      showMessage(result, 'success');
-    } catch (error) {
-      showMessage(`设置失败: ${error}`, 'error');
-    }
-  };
-
+  
   const loadSystemTraySettings = async () => {
     try {
       const trayEnabled = await SystemTrayService.getSystemTrayState();
@@ -343,15 +313,6 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">功能选项</h3>
 
               <div className="space-y-1">
-                <SettingToggle
-                  icon={<Zap className="h-4 w-4 text-amber-500" />}
-                  title="智能监控"
-                  description="自动检测数据库变化并同步"
-                  checked={isDbMonitoringEnabled}
-                  onChange={handleDbMonitoringToggle}
-                  isLoading={isSettingsLoading}
-                />
-
                 <SettingToggle
                   icon={<Monitor className="h-4 w-4 text-blue-500" />}
                   title="系统托盘"

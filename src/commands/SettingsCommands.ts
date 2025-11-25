@@ -5,22 +5,6 @@ import type { AppSettings } from './types/settings.types';
  * 设置管理命令
  */
 export class SettingsCommands {
-  /**
-   * 获取数据库监控状态
-   * @returns 是否已启用数据库监控
-   */
-  static async isDbMonitoringEnabled(): Promise<boolean> {
-    return invoke('is_db_monitoring_enabled');
-  }
-
-  /**
-   * 保存数据库监控状态
-   * @param enabled 是否启用
-   * @returns 保存结果消息
-   */
-  static async saveDbMonitoringState(enabled: boolean): Promise<string> {
-    return invoke('save_db_monitoring_state', { enabled });
-  }
 
   /**
    * 获取静默启动状态

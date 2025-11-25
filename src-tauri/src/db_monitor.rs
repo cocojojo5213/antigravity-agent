@@ -3,7 +3,7 @@
 use serde::Serialize;
 use serde_json::Value;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 use tokio::time::{interval, Duration};
 use tracing::{error, info, warn};
@@ -57,14 +57,6 @@ impl DatabaseMonitor {
                     break;
                 }
                 drop(running);
-
-                // 检查是否启用了监控设置
-                let settings_manager = app_handle.state::<crate::app_settings::AppSettingsManager>();
-                let settings = settings_manager.get_settings();
-
-                if !settings.db_monitoring_enabled {
-                    continue;
-                }
 
                 // 获取当前完整数据
                 match Self::get_complete_data().await {

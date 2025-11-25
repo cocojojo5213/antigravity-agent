@@ -1,6 +1,6 @@
 /**
- * 数据库监控设置 Store
- * 合并了数据库监控设置和数据库监听状态管理
+ * 数据库监控 Store - 简化版
+ * 智能监控现在是默认功能，自动启动
  */
 
 import { create } from 'zustand';
@@ -14,6 +14,8 @@ export interface DatabaseChangeEvent {
     timestamp: number;
     old_data?: any;
     new_data?: any;
+    diff?: any;
+    originalEvent?: any;
 }
 
 // 导出事件相关类型
@@ -38,24 +40,15 @@ type DatabaseEventMap = {
 // 事件监听器类型
 type DatabaseEventListener<T extends keyof DatabaseEventMap> = (data: DatabaseEventMap[T]) => void;
 
-// 状态接口
-interface DbMonitoringState {
-  // 数据库监控设置
-  dbMonitoringEnabled: boolean;
-}
-
-// 操作接口
+// 操作接口 - 简化版，移除了设置管理
 interface DbMonitoringActions {
-  // 数据库监控操作
-  loadSettings: () => Promise<boolean>;
-  setDbMonitoringEnabled: (enabled: boolean) => Promise<void>;
-  toggleDbMonitoring: () => Promise<void>;
+  // 初始化监控（启动时调用）
+  initializeMonitoring: () => Promise<void>;
 
-  // 数据库监听操作
-  startListening: () => Promise<void>;
-  stopListening: () => Promise<void>;
+  // 停止监听（清理资源）
   cleanup: () => Promise<void>;
 
+  // 添加事件监听器
   addListener: <T extends keyof DatabaseEventMap>(
     event: T,
     listener: DatabaseEventListener<T>
@@ -63,87 +56,13 @@ interface DbMonitoringActions {
 }
 
 // 创建 Store
-export const useDbMonitoringStore = create<DbMonitoringState & DbMonitoringActions>()(
+export const useDbMonitoringStore = create<DbMonitoringActions>()(
   (set, get) => ({
-      // 初始状态
-      // 数据库监控设置
-      dbMonitoringEnabled: true, // 默认启用
-
-      // 加载数据库监控设置
-      loadSettings: async (): Promise<boolean> => {
-        logger.info('加载数据库监控设置', { module: 'DbMonitoringStore' });
+      // 初始化监控（应用启动时调用）
+      initializeMonitoring: async (): Promise<void> => {
+        logger.info('初始化数据库监控', { module: 'DbMonitoringStore' });
 
         try {
-          // 加载数据库监控设置
-          const dbMonitoringEnabled = await invoke<boolean>('is_db_monitoring_enabled');
-
-          set({ dbMonitoringEnabled });
-
-          if (dbMonitoringEnabled) {
-            get().startListening()
-          }
-
-          logger.info('数据库监控设置已同步', {
-            module: 'DbMonitoringStore',
-            enabled: dbMonitoringEnabled,
-            autoStarted: dbMonitoringEnabled
-          });
-          return dbMonitoringEnabled
-        } catch (error) {
-          logger.error('加载监控设置失败', {
-            module: 'DbMonitoringStore',
-            error: error instanceof Error ? error.message : String(error)
-          });
-          // 使用默认值
-          set({ dbMonitoringEnabled: true });
-        }
-      },
-
-      // 设置数据库监控启用状态
-      setDbMonitoringEnabled: async (enabled: boolean): Promise<void> => {
-        logger.info('设置数据库监控状态', { module: 'DbMonitoringStore', enabled });
-
-        try {
-          // 调用后端设置
-          await invoke('set_db_monitoring_enabled', { enabled });
-          if (!enabled) {
-            get().stopListening()
-          }
-          set({ dbMonitoringEnabled: enabled });
-
-          logger.info('数据库监控设置已更新', {
-            module: 'DbMonitoringStore',
-            enabled,
-            previousState: !enabled
-          });
-        } catch (error) {
-          logger.error('设置监控状态失败', {
-            module: 'DbMonitoringStore',
-            enabled,
-            error: error instanceof Error ? error.message : String(error)
-          });
-          throw error;
-        }
-      },
-
-      // 切换数据库监控状态
-      toggleDbMonitoring: async (): Promise<void> => {
-        const currentEnabled = get().dbMonitoringEnabled;
-        logger.info('手动切换数据库监控', {
-          module: 'DbMonitoringStore',
-          from: currentEnabled,
-          to: !currentEnabled
-        });
-        await get().setDbMonitoringEnabled(!currentEnabled);
-      },
-
-      // 数据库监听操作
-      startListening: async (): Promise<void> => {
-        try {
-          logger.info('启动数据库监听', {
-            module: 'DbMonitoringStore'
-          });
-
           // 清理之前的监听器
           await get().cleanup();
 
@@ -166,11 +85,6 @@ export const useDbMonitoringStore = create<DbMonitoringState & DbMonitoringActio
               });
             }
 
-            // 触发界面更新（不管有没有变化）
-            logger.info('触发界面更新', {
-              module: 'DbMonitoringStore'
-            });
-
             // 发射内部数据库变化事件
             databaseEventEmitter.emit(DATABASE_EVENTS.DATA_CHANGED, {
               timestamp: Date.now(),
@@ -188,31 +102,14 @@ export const useDbMonitoringStore = create<DbMonitoringState & DbMonitoringActio
           // 监听后端推送的数据库变化事件
           globalUnlistenFn = await listen('database-changed', handleDatabaseChange);
 
-          invoke('start_database_monitoring');
-          logger.info('数据库监听已启动', {
+          // 启动后端监控
+          await invoke('start_database_monitoring');
+
+          logger.info('数据库监控已启动', {
             module: 'DbMonitoringStore'
           });
         } catch (error) {
-          logger.error('启动数据库监听失败', {
-            module: 'DbMonitoringStore',
-            error: error instanceof Error ? error.message : String(error)
-          });
-        }
-      },
-
-      stopListening: async (): Promise<void> => {
-        try {
-          logger.info('停止数据库监听', {
-            module: 'DbMonitoringStore'
-          });
-
-          await get().cleanup();
-
-          logger.info('数据库监听已停止', {
-            module: 'DbMonitoringStore'
-          });
-        } catch (error) {
-          logger.error('停止数据库监听失败', {
+          logger.error('启动数据库监控失败', {
             module: 'DbMonitoringStore',
             error: error instanceof Error ? error.message : String(error)
           });

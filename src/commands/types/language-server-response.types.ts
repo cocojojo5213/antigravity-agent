@@ -1,4 +1,4 @@
-﻿export namespace UserQuotaInfo {
+﻿export namespace LanguageServerResponse {
   export interface Root {
     userStatus: UserStatus
   }

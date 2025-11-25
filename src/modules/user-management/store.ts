@@ -42,7 +42,6 @@ export const useUserManagement = create<UserStoreState & UserStoreActions>()((se
     }
   },
 
-
   addCurrentUser: async (): Promise<void> => {
     logger.info('开始备份当前用户', { module: 'UserManagement' });
 
@@ -117,11 +116,31 @@ export const useUserManagement = create<UserStoreState & UserStoreActions>()((se
     }
   },
 
-  // TODO: 实现获取当前用户的逻辑
   currentUser: async (): Promise<string | null> => {
-    // 需要调用 Tauri 命令获取当前 Antigravity 用户邮箱
-    logger.info('获取当前用户 - 功能待实现', { module: 'UserManagement' });
-    return null;
+    logger.info('开始获取当前用户', { module: 'UserManagement' });
+
+    try {
+      // 复用已封装的 AccountCommands
+      const currentInfo = await AccountCommands.getCurrentInfo();
+
+      // 直接检查 email 字段
+      if (currentInfo?.email) {
+        logger.info('成功获取当前用户', {
+          module: 'UserManagement',
+          email: currentInfo.email
+        });
+        return currentInfo.email;
+      }
+
+      logger.warn('未找到当前登录用户', { module: 'UserManagement' });
+      return null;
+    } catch (error) {
+      logger.error('获取当前用户失败', {
+        module: 'UserManagement',
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return null;
+    }
   },
 
   // ============ 批量操作 ============

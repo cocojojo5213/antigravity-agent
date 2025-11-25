@@ -8,12 +8,11 @@ use tauri::{AppHandle, Manager};
 /// 获取数据库监控运行状态
 #[tauri::command]
 pub async fn is_database_monitoring_running(
-    app: AppHandle,
+    _app: AppHandle,
 ) -> Result<bool, String> {
     crate::log_async_command!("is_database_monitoring_running", async {
-        let settings_manager = app.state::<crate::app_settings::AppSettingsManager>();
-        let settings = settings_manager.get_settings();
-        Ok(settings.db_monitoring_enabled)
+        // 智能监控现在是默认功能，总是返回 true
+        Ok(true)
     })
 }
 

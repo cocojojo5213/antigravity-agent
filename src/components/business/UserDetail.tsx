@@ -1,17 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { User, Calendar, Clock, Settings, Key, FileText, X, Copy, Check } from 'lucide-react';
-import type { AntigravityAccount } from '@/commands/types/account.types';
-import {
-  BaseDialog,
-  BaseDialogContent,
-  BaseDialogHeader,
-  BaseDialogTitle,
-} from '@/components/base-ui/BaseDialog';
-import { BaseButton } from '@/components/base-ui/BaseButton';
-import { cn } from '@/utils/utils';
-import {AccountCommands} from "@/commands/AccountCommands.ts";
-import {invoke} from "@tauri-apps/api/core";
-import { logger } from '@/utils/logger';
+import React, {useState} from 'react';
+import {Calendar, Check, Clock, Copy, Key, Settings, User, X} from 'lucide-react';
+import type {AntigravityAccount} from '@/commands/types/account.types';
+import {BaseDialog, BaseDialogContent, BaseDialogHeader, BaseDialogTitle,} from '@/components/base-ui/BaseDialog';
+import {BaseButton} from '@/components/base-ui/BaseButton';
+import {cn} from '@/utils/utils';
+import {logger} from '@/utils/logger';
 
 interface BusinessUserDetailProps {
   isOpen: boolean;

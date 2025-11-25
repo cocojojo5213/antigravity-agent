@@ -92,9 +92,7 @@ fn main() {
             save_system_tray_state,
             get_system_tray_state,
             toggle_system_tray,
-            is_db_monitoring_enabled,
-            save_db_monitoring_state,
-            is_silent_start_enabled,
+              is_silent_start_enabled,
             save_silent_start_state,
             get_all_settings,
             // 数据库监控命令
