@@ -102,7 +102,7 @@ impl<'a> MakeWriter<'a> for DailyLogFileAppender {
 /// init_tracing(&PathBuf::from("/config/dir")).expect("Failed to init tracing");
 /// ```
 pub fn init_tracing(config_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    // 创建日志目录
+    // AppState 已经把 config_dir 设为 %APPDATA%/.antigravity-agent，直接在其下创建 logs
     let log_dir = config_dir.join("logs");
     std::fs::create_dir_all(&log_dir)?;
 
@@ -185,4 +185,3 @@ pub fn log_database_operation(operation: &str, table: Option<&str>, success: boo
         }
     }
 }
-
