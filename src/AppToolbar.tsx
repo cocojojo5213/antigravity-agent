@@ -1,17 +1,17 @@
 import React, {useCallback, useState} from 'react';
-import {Download, Play, Plus, Square, Upload} from 'lucide-react';
+import {Download, Plus, Upload} from 'lucide-react';
 import BusinessUpdateDialog from './components/business/UpdateDialog.tsx';
 import BusinessConfirmDialog from './components/business/ConfirmDialog.tsx';
 import BusinessActionButton from './components/business/ActionButton.tsx';
 import ToolbarTitle from './components/ui/toolbar-title.tsx';
 import {useUpdateChecker} from './hooks/useUpdateChecker.ts';
 import {useAntigravityAccount} from '@/modules/use-antigravity-account.ts';
-import {useAntigravityIsRunning} from '@/hooks/useAntigravityIsRunning.ts';
 import {logger} from './utils/logger.ts';
 import toast from 'react-hot-toast';
 import {useImportExportAccount} from "@/modules/use-import-export-accounts.ts";
 import {useAntigravityProcess} from "@/hooks/use-antigravity-process.ts";
-import PasswordDialog from "@/components/PasswordDialog.tsx";
+import ImportPasswordDialog from "@/components/ImportPasswordDialog.tsx";
+import ExportPasswordDialog from "@/components/ExportPasswordDialog.tsx";
 import BusinessSettingsDialog from "@/components/business/SettingsDialog.tsx";
 
 const AppToolbar = () => {
@@ -19,57 +19,39 @@ const AppToolbar = () => {
   // ========== 应用状态 ==========
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const [passwordDialog, setPasswordDialog] = useState({
-    isOpen: false,
-    title: '',
-    description: '',
-    requireConfirmation: false,
-    onSubmit: () => {
-    },
-    validatePassword: null as (password: string) => { isValid: boolean; message?: string },
-  });
-
+  
   const antigravityAccount = useAntigravityAccount();
-
-  // 打开密码对话框
-  const showPasswordDialog = (config) => {
-    setPasswordDialog({
-      isOpen: true,
-      title: config.title,
-      description: config.description || '',
-      requireConfirmation: config.requireConfirmation || false,
-      onSubmit: config.onSubmit,
-      validatePassword: config.validatePassword
-    })
-  };
-
-  // 关闭密码对话框
-  const closePasswordDialog = useCallback(() => {
-    setPasswordDialog(prev => ({...prev, isOpen: false}));
-  }, []);
-
-  // 处理密码对话框取消
-  const handlePasswordDialogCancel = useCallback(() => {
-    closePasswordDialog();
-    toast.error('操作已取消');
-  }, [closePasswordDialog]);
-
   const importExportAccount = useImportExportAccount();
+  // 使用单独的选择器避免无限循环
+  const isImporting = useImportExportAccount((state) => state.isImporting);
+  const isExporting = useImportExportAccount((state) => state.isExporting);
+  const isCheckingData = useImportExportAccount((state) => state.isCheckingData);
+  const importDialogIsOpen = useImportExportAccount((state) => state.importDialogIsOpen);
+  const exportDialogIsOpen = useImportExportAccount((state) => state.exportDialogIsOpen);
+
+  // 处理导入对话框取消
+  const handleImportDialogCancel = useCallback(() => {
+    importExportAccount.closeImportDialog();
+    toast.error('操作已取消');
+  }, [importExportAccount]);
+
+  // 处理导出对话框取消
+  const handleExportDialogCancel = useCallback(() => {
+    importExportAccount.closeExportDialog();
+    toast.error('操作已取消');
+  }, [importExportAccount]);
 
   // 包装方法以刷新用户列表
   const handleImportConfig = () => {
-    importExportAccount.importConfig(showPasswordDialog, closePasswordDialog)
-      .then(() => {
-
-      })
+    importExportAccount.importConfig()
   };
-  const handleExportConfig = () => importExportAccount.exportConfig(showPasswordDialog, closePasswordDialog);
+  const handleExportConfig = () => importExportAccount.exportConfig();
 
   // 进程管理
   const {isProcessLoading, backupAndRestartAntigravity} = useAntigravityProcess();
 
-  // Antigravity 进程状态
-  const isRunning = useAntigravityIsRunning((state) => state.isRunning);
+  // 计算全局加载状态
+  const isAnyLoading = isProcessLoading || isImporting || isExporting;
 
   // 确认对话框状态（用于"登录新账户"操作）
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -166,11 +148,14 @@ const AppToolbar = () => {
     }
   };
 
-  // 计算全局加载状态
-  const isAnyLoading = isProcessLoading ||
-    importExportAccount.isImporting ||
-    importExportAccount.isExporting;
+  const handleSubmitImportPassword = (password: string) => {
+    importExportAccount.submitImportPassword(password)
+    .then(() => {
+      antigravityAccount.getUsers()
+    })
+  };
 
+  
   return (
     <>
       <div className="toolbar bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 backdrop-blur-sm shadow-sm">
@@ -182,18 +167,6 @@ const AppToolbar = () => {
                 downloadProgress={downloadProgress}
                 onUpdateClick={handleUpdateBadgeClick}
               />
-
-              {/* Antigravity 进程状态指示器 */}
-              <div
-                className="ml-2 p-2"
-                title={isRunning ? 'Antigravity 正在运行' : 'Antigravity 未运行'}
-              >
-                {isRunning ? (
-                  <Play className="w-4 h-4 text-green-500 fill-green-500" />
-                ) : (
-                  <Square className="w-4 h-4 text-red-500 fill-red-500" />
-                )}
-              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -216,7 +189,7 @@ const AppToolbar = () => {
                 variant="secondary"
                 icon={<Upload className="h-4 w-4" />}
                 tooltip="导入加密的配置文件"
-                isLoading={importExportAccount.isImporting}
+                isLoading={isImporting}
                 loadingText="导入中..."
                 isAnyLoading={isAnyLoading}
               >
@@ -229,8 +202,8 @@ const AppToolbar = () => {
                 icon={<Download className="h-4 w-4" />}
                 tooltip={antigravityAccount.users.length > 0 ? "导出为加密配置文件" : "没有用户信息可以导出"}
                 disabled={antigravityAccount.users.length === 0}
-                isLoading={importExportAccount.isExporting || importExportAccount.isCheckingData}
-                loadingText={importExportAccount.isCheckingData ? "检查中..." : "导出中..."}
+                isLoading={isExporting || isCheckingData}
+                loadingText={isCheckingData ? "检查中..." : "导出中..."}
                 isAnyLoading={isAnyLoading}
               >
                 导出
@@ -291,19 +264,18 @@ const AppToolbar = () => {
         }}
       />
 
-      <PasswordDialog
-        isOpen={passwordDialog.isOpen}
-        title={passwordDialog.title}
-        description={passwordDialog.description}
-        requireConfirmation={passwordDialog.requireConfirmation}
-        onSubmit={passwordDialog.onSubmit}
-        onCancel={handlePasswordDialogCancel}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            closePasswordDialog();
-          }
-        }}
-        validatePassword={passwordDialog.validatePassword}
+      <ImportPasswordDialog
+        isOpen={importDialogIsOpen}
+        onSubmit={handleSubmitImportPassword}
+        onCancel={handleImportDialogCancel}
+        onOpenChange={(open) => !open && importExportAccount.closeImportDialog()}
+      />
+
+      <ExportPasswordDialog
+        isOpen={exportDialogIsOpen}
+        onSubmit={importExportAccount.submitExportPassword}
+        onCancel={handleExportDialogCancel}
+        onOpenChange={(open) => !open && importExportAccount.closeExportDialog()}
       />
 
       <BusinessSettingsDialog

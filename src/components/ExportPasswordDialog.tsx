@@ -1,35 +1,31 @@
 import React, { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
+import { X, Eye, EyeOff, Lock, Download } from 'lucide-react';
 
-interface PasswordDialogProps {
+interface ExportPasswordDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  title: string;
-  description?: string;
-  requireConfirmation?: boolean;
   onSubmit: (password: string) => void;
   onCancel: () => void;
-  submitButtonText?: string;
-  validatePassword?: (password: string) => { isValid: boolean; message?: string };
 }
 
-const PasswordDialog: React.FC<PasswordDialogProps> = ({
+const ExportPasswordDialog: React.FC<ExportPasswordDialogProps> = ({
   isOpen,
   onOpenChange,
-  title,
-  description,
-  requireConfirmation = false,
   onSubmit,
-  onCancel,
-  submitButtonText = '确认',
-  validatePassword
+  onCancel
 }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationError, setValidationError] = useState<string>('');
+
+  const validatePassword = (password: string) => {
+    if (password.length < 4) return { isValid: false, message: '密码长度至少为4位' };
+    if (password.length > 50) return { isValid: false, message: '密码长度不能超过50位' };
+    return { isValid: true };
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,21 +40,25 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({
     }
 
     // 自定义密码验证
-    if (validatePassword) {
-      const validation = validatePassword(password);
-      if (!validation.isValid) {
-        setValidationError(validation.message || '密码无效');
-        return;
-      }
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      setValidationError(validation.message || '密码无效');
+      return;
     }
 
     // 确认密码验证
-    if (requireConfirmation && password !== confirmPassword) {
+    if (password !== confirmPassword) {
       setValidationError('两次输入的密码不一致');
       return;
     }
 
     onSubmit(password);
+    // 重置状态
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setValidationError('');
   };
 
   const handleClose = () => {
@@ -68,12 +68,12 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({
     setShowPassword(false);
     setShowConfirmPassword(false);
     setValidationError('');
-    onCancel();
+    onOpenChange(false);
   };
 
   const isValid = password.trim() !== '' &&
-                  (!validatePassword || validatePassword(password).isValid) &&
-                  (!requireConfirmation || password === confirmPassword);
+                  validatePassword(password).isValid &&
+                  password === confirmPassword;
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
@@ -81,15 +81,13 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({
         <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50" />
         <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] z-50">
           <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white p-6 pb-4 flex items-center gap-3">
-            <KeyRound className="h-5 w-5 text-antigravity-blue" />
-            {title}
+            <Download className="h-5 w-5 text-antigravity-blue" />
+            导出配置文件
           </Dialog.Title>
 
-          {description && (
-            <Dialog.Description className="text-sm text-gray-600 dark:text-gray-400 px-6 pb-4">
-              {description}
-            </Dialog.Description>
-          )}
+          <Dialog.Description className="text-sm text-gray-600 dark:text-gray-400 px-6 pb-4">
+            请设置导出密码，用于保护您的配置文件
+          </Dialog.Description>
 
           <form onSubmit={handleSubmit} className="p-6 pt-0">
             <div className="space-y-4">
@@ -123,34 +121,32 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({
               </div>
 
               {/* 确认密码输入 */}
-              {requireConfirmation && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    <Lock className="h-4 w-4" />
-                    确认密码
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="请再次输入密码"
-                      className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-antigravity-blue focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  确认密码
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="请再次输入密码"
+                    className="w-full px-4 py-3 pr-12 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-antigravity-blue focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
-              )}
+              </div>
 
               {/* 错误信息 */}
               {validationError && (
@@ -159,7 +155,7 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({
                 </div>
               )}
 
-                          </div>
+            </div>
 
             {/* 按钮组 */}
             <div className="flex gap-3 mt-6">
@@ -177,7 +173,7 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({
                 disabled={!isValid}
                 className="flex-1 px-4 py-3 bg-antigravity-blue text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md"
               >
-                {submitButtonText}
+                确认
               </button>
             </div>
           </form>
@@ -197,4 +193,4 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({
   );
 };
 
-export default PasswordDialog;
+export default ExportPasswordDialog;

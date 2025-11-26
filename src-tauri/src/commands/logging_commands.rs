@@ -68,34 +68,58 @@ pub async fn write_text_file(path: String, content: String) -> Result<String, St
     })
 }
 
+/// 解密配置数据 - 接收文件路径
+/// 直接读取文件并进行解密，避免前端传输大文件
 #[tauri::command]
-pub async fn decrypt_config_data(encrypted_data: String, password: String) -> Result<String, String> {
+pub async fn decrypt_config_data(file_path: String, password: String) -> Result<String, String> {
     crate::log_async_command!("decrypt_config_data", async {
         use base64::{Engine as _, engine::general_purpose::STANDARD};
+        use tokio::fs as tokio_fs;
 
-        // 使用 XOR 解密
-        let encrypted = STANDARD
-            .decode(encrypted_data)
-            .map_err(|e| format!("Base64解码失败: {}", e))?;
+        // 读取文件内容
+        let file_content = tokio_fs::read(&file_path)
+            .await
+            .map_err(|e| format!("读取文件失败: {}", e))?;
 
-        let encrypted_bytes = encrypted;
-        let key_bytes = password.as_bytes();
-        let mut decrypted_bytes = vec![0u8; encrypted_bytes.len()];
-
-        for (i, &byte) in encrypted_bytes.iter().enumerate() {
-            decrypted_bytes[i] = byte ^ key_bytes[i % key_bytes.len()];
+        if file_content.is_empty() {
+            return Err("文件内容为空".to_string());
         }
 
-        let decrypted_json = String::from_utf8(decrypted_bytes)
-            .map_err(|e| format!("UTF-8解码失败: {}", e))?;
+        // 转换为字符串处理
+        let file_string = String::from_utf8(file_content)
+            .map_err(|e| format!("文件编码错误: {}", e))?;
+        let file_size = file_string.len();
+
+        // 检测文件是否为 Base64 编码（加密文件）
+        let encrypted_content = if file_string.trim_start().starts_with('{') {
+            // 如果是 JSON 格式，直接使用（未加密文件）
+            file_string
+        } else {
+            // 如果是 Base64 格式，进行解码
+            let encrypted = STANDARD
+                .decode(file_string.trim())
+                .map_err(|e| format!("Base64解码失败: {}", e))?;
+
+            let encrypted_bytes = encrypted;
+            let key_bytes = password.as_bytes();
+            let mut decrypted_bytes = vec![0u8; encrypted_bytes.len()];
+
+            // XOR 解密
+            for (i, &byte) in encrypted_bytes.iter().enumerate() {
+                decrypted_bytes[i] = byte ^ key_bytes[i % key_bytes.len()];
+            }
+
+            String::from_utf8(decrypted_bytes)
+                .map_err(|e| format!("UTF-8解码失败: {}", e))?
+        };
 
         // 验证是否为有效的JSON
-        if serde_json::from_str::<serde_json::Value>(&decrypted_json).is_err() {
-            return Err("解密后的数据不是有效的JSON格式".to_string());
+        if serde_json::from_str::<serde_json::Value>(&encrypted_content).is_err() {
+            return Err("解密后的数据不是有效的JSON格式，请检查密码是否正确".to_string());
         }
 
-        tracing::info!("🔓 配置文件解密成功");
-        Ok(decrypted_json)
+        tracing::info!("🔓 配置文件解密成功，文件大小: {} bytes", file_size);
+        Ok(encrypted_content)
     })
 }
 
