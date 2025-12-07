@@ -19,7 +19,7 @@ export class SettingsCommands {
    * @param enabled 是否启用
    * @returns 保存结果消息
    */
-  static async saveSilentStartState(enabled: boolean): Promise<string> {
+  static async saveSilentStartState(enabled: boolean): Promise<boolean> {
     return invoke('save_silent_start_state', { enabled });
   }
 

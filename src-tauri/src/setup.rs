@@ -52,12 +52,30 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
     let settings_manager = app.state::<app_settings::AppSettingsManager>();
     let settings = settings_manager.get_settings();
 
-    if settings.silent_start_enabled {
-        tracing::info!(target: "app::setup::silent_start", "静默启动模式已启用，准备隐藏主窗口");
+    // 双重检查：如果静默启动但未启用系统托盘，这是不允许的
+    if settings.silent_start_enabled && !settings.system_tray_enabled {
+        tracing::warn!(
+            target: "app::setup::silent_start",
+            "检测到危险配置：静默启动已启用但系统托盘未启用。自动禁用静默启动以确保安全。"
+        );
+
+        // 自动修正这个配置
+        if let Err(e) = settings_manager.update_settings(|s| {
+            s.silent_start_enabled = false;
+        }) {
+            tracing::error!(
+                target: "app::setup::silent_start",
+                error = %e,
+                "自动修正设置失败"
+            );
+        }
+
+        tracing::info!(target: "app::setup::silent_start", "已禁用静默启动，正常显示窗口");
+    } else if settings.silent_start_enabled && settings.system_tray_enabled {
+        tracing::info!(target: "app::setup::silent_start", "静默启动模式已启用（系统托盘已启用），准备隐藏主窗口");
 
         // 延迟执行静默启动，确保在窗口状态恢复完成后隐藏窗口
         let app_handle_for_silent = app.handle().clone();
-        let system_tray_enabled = settings.system_tray_enabled;
 
         tauri::async_runtime::spawn(async move {
             // 等待1.5秒，确保窗口状态恢复和其他初始化都完成
@@ -70,13 +88,7 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
                 match main_window.hide() {
                     Ok(()) => {
                         tracing::info!(target: "app::setup::silent_start", "静默启动：窗口已隐藏");
-
-                        // 如果启用了系统托盘，提示用户可通过托盘访问
-                        if system_tray_enabled {
-                            tracing::info!(target: "app::setup::silent_start", "静默启动 + 系统托盘：可通过系统托盘图标访问应用");
-                        } else {
-                            tracing::warn!(target: "app::setup::silent_start", "静默启动但系统托盘未启用：用户需要通过其他方式访问应用");
-                        }
+                        tracing::info!(target: "app::setup::silent_start", "可通过系统托盘图标访问应用");
                     }
                     Err(e) => {
                         tracing::error!(target: "app::setup::silent_start", error = %e, "静默启动隐藏窗口失败");

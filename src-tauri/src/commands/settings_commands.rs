@@ -15,7 +15,7 @@ pub async fn is_silent_start_enabled(app: AppHandle) -> Result<bool, String> {
 
 /// 保存静默启动状态
 #[tauri::command]
-pub async fn save_silent_start_state(app: AppHandle, enabled: bool) -> Result<String, String> {
+pub async fn save_silent_start_state(app: AppHandle, enabled: bool) -> Result<bool, String> {
     crate::log_async_command!("save_silent_start_state", async {
         let settings_manager = app.state::<crate::app_settings::AppSettingsManager>();
 
@@ -23,8 +23,7 @@ pub async fn save_silent_start_state(app: AppHandle, enabled: bool) -> Result<St
             settings.silent_start_enabled = enabled;
         })?;
 
-        let status_text = if enabled { "已启用" } else { "已禁用" };
-        Ok(format!("静默启动{}", status_text))
+        Ok(enabled)
     })
 }
 

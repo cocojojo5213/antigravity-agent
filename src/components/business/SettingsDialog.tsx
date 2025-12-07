@@ -3,12 +3,12 @@ import {FileCode, Monitor, Settings, VolumeX} from 'lucide-react';
 import {open} from '@tauri-apps/plugin-dialog';
 import {getVersion} from '@tauri-apps/api/app';
 import {BaseButton} from '@/components/base-ui/BaseButton';
-import {SystemTrayService} from '../../services/system-tray-service';
-import {SilentStartService} from '../../services/silent-start-service';
 import {cn} from '@/utils/utils';
 import {logger} from '@/utils/logger';
 import {PlatformCommands} from "@/commands/PlatformCommands.ts";
 import {Modal} from "antd";
+import {SettingsCommands} from "@/commands/SettingsCommands.ts";
+import {TrayCommands} from "@/commands/TrayCommands.ts";
 
 interface BusinessSettingsDialogProps {
   isOpen: boolean;
@@ -64,7 +64,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
   
   const loadSystemTraySettings = async () => {
     try {
-      const trayEnabled = await SystemTrayService.getSystemTrayState();
+      const trayEnabled = await TrayCommands.isEnabled();
       setIsSystemTrayEnabled(trayEnabled);
     } catch (error) {
       logger.error('加载系统托盘设置失败', {
@@ -78,28 +78,41 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
 
   const handleSystemTrayToggle = async () => {
     setIsTrayLoading(true);
-    const result = await SystemTrayService.toggleSystemTray();
+    const result = await TrayCommands.toggle();
     setIsSystemTrayEnabled(result.enabled);
+    setIsTrayLoading(false);
+    if (!result.enabled && isSilentStartEnabled) {
+      await handleSilentStartToggle();
+    }
   };
 
   const loadSilentStartSettings = async () => {
     try {
-      const silentStartEnabled = await SilentStartService.getSilentStartState();
+      const silentStartEnabled = await SettingsCommands.isSilentStartEnabled();
       setIsSilentStartEnabled(silentStartEnabled);
     } catch (error) {
-      logger.error('加载静默启动设置失败', {
-        module: 'SettingsDialog',
-        action: 'load_silent_start_settings_failed',
-        error: error instanceof Error ? error.message : String(error)
-      });
       setIsSilentStartEnabled(false);
     }
   };
 
-  const handleSilentStartToggle = async (enabled: boolean) => {
+  const handleSilentStartToggle = async () => {
+    if (!isSystemTrayEnabled) {
+      await handleSystemTrayToggle();
+    }
+
     setIsSilentStartLoading(true);
-    const result = await SilentStartService.setSilentStartEnabled(enabled);
-    setIsSilentStartEnabled(result.enabled);
+    try {
+      const result = await SettingsCommands.saveSilentStartState(!isSilentStartEnabled);
+      setIsSilentStartEnabled(result);
+    } catch (error) {
+      console.log('切换静默启动状态失败', {
+        module: 'SettingsDialog',
+        action: 'toggle_silent_start_failed',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setIsSilentStartLoading(false);
+    }
   };
 
   
@@ -186,7 +199,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
             title="静默启动"
             description="启动时自动隐藏主窗口"
             checked={isSilentStartEnabled}
-            onChange={() => handleSilentStartToggle(!isSilentStartEnabled)}
+            onChange={handleSilentStartToggle}
             isLoading={isSilentStartLoading}
           />
         </div>
