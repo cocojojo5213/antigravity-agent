@@ -21,8 +21,8 @@
       "icons/icon.icns"
     ],
     "category": "Utility",
-    "shortDescription": "Antigravity account and profile manager",
-    "longDescription": "Antigravity Agent helps you manage Antigravity accounts and backup user profiles with ease.",
+    "shortDescription": "Antigravity Account management tool",
+    "longDescription": "Antigravity Agent - Account management tool",
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",

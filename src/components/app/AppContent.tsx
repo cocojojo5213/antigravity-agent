@@ -3,6 +3,7 @@ import type {AntigravityAccount} from "@/commands/types/account.types.ts";
 import BusinessUserDetail from "@/components/business/AccountDetailModal.tsx";
 import {useAntigravityAccount, useCurrentAntigravityAccount} from "@/modules/use-antigravity-account.ts";
 import {useAvailableModels} from "@/modules/use-available-models.ts";
+import {useTrayMenu} from "@/hooks/useTrayMenu.ts";
 
 import BusinessConfirmDialog from "@/components/business/ConfirmDialog.tsx";
 import toast from 'react-hot-toast';
@@ -17,6 +18,9 @@ export function AppContent() {
   const availableModels = useAvailableModels();
   const currentAntigravityAccount = useCurrentAntigravityAccount();
   const appGlobalLoader = useAppGlobalLoader();
+
+  // 初始化托盘菜单更新
+  useTrayMenu();
 
   // 用户详情处理
   const handleUserClick = (user: AntigravityAccount) => {
@@ -34,7 +38,7 @@ export function AppContent() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        await antigravityAccount.getUsers();
+        await antigravityAccount.getAccounts();
       } catch (error) {
         toast.error(`获取用户列表失败: ${error}`);
       } finally {
@@ -46,10 +50,10 @@ export function AppContent() {
 
   useEffect(() => {
     antigravityAccount.updateCurrentAccount()
-    antigravityAccount.users.forEach(user => {
+    antigravityAccount.accounts.forEach(user => {
       availableModels.fetchData(user)
     })
-  }, [antigravityAccount.users]);
+  }, [antigravityAccount.accounts]);
 
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -72,14 +76,14 @@ export function AppContent() {
   const handleSwitchAccount = async (user: AntigravityAccount) => {
     try {
       appGlobalLoader.open({label: `正在切换到用户: ${maskEmail(user.email)}...`});
-      await antigravityAccount.switchUser(user.email);
+      await antigravityAccount.switchToAccount(user.email);
     } finally {
       appGlobalLoader.close();
     }
   };
 
   const handleClearAllBackups = () => {
-    if (antigravityAccount.users.length === 0) {
+    if (antigravityAccount.accounts.length === 0) {
       toast.error('当前没有用户备份可清空');
       return;
     }
@@ -88,7 +92,7 @@ export function AppContent() {
 
   const confirmClearAllBackups = async () => {
     try {
-      await antigravityAccount.clearAllUsers();
+      await antigravityAccount.clearAllAccounts();
       toast.success('清空所有备份成功');
       setIsClearDialogOpen(false);
     } catch (error) {
@@ -99,8 +103,8 @@ export function AppContent() {
   return (
     <>
       <section className="card section-span-full">
-        <div className={antigravityAccount.users.length === 0 ? "backup-list-empty" : "backup-list-vertical"}>
-          {antigravityAccount.users.length === 0 ? (
+        <div className={antigravityAccount.accounts.length === 0 ? "backup-list-empty" : "backup-list-vertical"}>
+          {antigravityAccount.accounts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,7 +120,7 @@ export function AppContent() {
             </div>
           ) : (
             <div className="flex flex-row gap-2 p-2">
-              {antigravityAccount.users.map((user, index) => {
+              {antigravityAccount.accounts.map((user, index) => {
                 const model = availableModels.data[user.api_key]
                 const geminiQuota = model?.models["gemini-3-pro-high"].quotaInfo.remainingFraction || 0
                 const claudeQuota = model?.models["claude-sonnet-4-5"].quotaInfo.remainingFraction || 0
@@ -145,7 +149,7 @@ export function AppContent() {
         isOpen={isClearDialogOpen}
         onOpenChange={setIsClearDialogOpen}
         title="确认清空所有备份"
-        description={`此操作将永久删除所有 ${antigravityAccount.users.length} 个账户，且无法恢复。请确认您要继续此操作吗？`}
+        description={`此操作将永久删除所有 ${antigravityAccount.accounts.length} 个账户，且无法恢复。请确认您要继续此操作吗？`}
         onConfirm={confirmClearAllBackups}
         onCancel={() => setIsClearDialogOpen(false)}
         variant="destructive"

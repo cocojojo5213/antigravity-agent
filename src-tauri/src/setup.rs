@@ -23,15 +23,6 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
         }
     }
 
-    // 初始化系统托盘管理器
-    let system_tray = app.state::<system_tray::SystemTrayManager>();
-    match system_tray.initialize(app.handle()) {
-        Ok(_) => tracing::info!(target: "app::setup::tray", "系统托盘管理器初始化成功"),
-        Err(e) => {
-            tracing::error!(target: "app::setup::tray", error = %e, "系统托盘管理器初始化失败")
-        }
-    }
-
     // 初始化数据库监控器
     let db_monitor = Arc::new(db_monitor::DatabaseMonitor::new(app.handle().clone()));
     app.manage(db_monitor.clone());
@@ -51,6 +42,19 @@ pub fn init(app: &mut App) -> std::result::Result<(), Box<dyn std::error::Error>
     // 检查静默启动设置
     let settings_manager = app.state::<app_settings::AppSettingsManager>();
     let settings = settings_manager.get_settings();
+
+    // 根据设置决定是否创建系统托盘
+    if settings.system_tray_enabled {
+        tracing::info!(target: "app::setup::tray", "系统托盘已启用，正在创建托盘");
+        let system_tray = app.state::<system_tray::SystemTrayManager>();
+        if let Err(e) = system_tray.enable(app.handle()) {
+            tracing::error!(target: "app::setup::tray", error = %e, "启动时创建系统托盘失败");
+        } else {
+            tracing::info!(target: "app::setup::tray", "系统托盘已创建");
+        }
+    } else {
+        tracing::info!(target: "app::setup::tray", "系统托盘已禁用，跳过创建");
+    }
 
     // 双重检查：如果静默启动但未启用系统托盘，这是不允许的
     if settings.silent_start_enabled && !settings.system_tray_enabled {

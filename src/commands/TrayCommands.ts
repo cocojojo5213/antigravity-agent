@@ -53,12 +53,13 @@ export class TrayCommands {
     return invoke('restore_from_tray');
   }
 
+  
   /**
-   * 保存系统托盘状态
-   * @param enabled 是否启用
-   * @returns 保存结果消息
+   * 更新托盘菜单
+   * @param accounts 账户邮箱列表
+   * @returns 更新结果消息
    */
-  static async saveState(enabled: boolean): Promise<string> {
-    return invoke('save_system_tray_state', { enabled });
+  static async updateMenu(accounts: string[]): Promise<string> {
+    return invoke('update_tray_menu_command', { accounts });
   }
 }

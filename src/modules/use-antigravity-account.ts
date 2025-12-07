@@ -11,7 +11,7 @@ const FILE_WRITE_DELAY_MS = 500; // 等待文件写入完成的延迟时间
 
 // Store 状态
 export interface AntigravityAccountState {
-  users: AntigravityAccount[];
+  accounts: AntigravityAccount[];
   currentAuthInfo: AntigravityAuthInfo | null;
 }
 
@@ -19,22 +19,21 @@ export interface AntigravityAccountState {
 export interface AntigravityAccountActions {
   // 基础操作
   delete: (email: string) => Promise<void>;
-  insertOrUpdateCurrent: () => Promise<void>;
-  switchUser: (email: string) => Promise<void>;
+  insertOrUpdateCurrentAccount: () => Promise<void>;
+  switchToAccount: (email: string) => Promise<void>;
   updateCurrentAccount: () => Promise<AntigravityAuthInfo | null>;
 
   // 批量操作
-  clearAllUsers: () => Promise<void>;
+  clearAllAccounts: () => Promise<void>;
 
   // 查询
-  getUsers: () => Promise<AntigravityAccount[]>;
-  searchUsers: (keyword: string) => AntigravityAccount[];
+  getAccounts: () => Promise<AntigravityAccount[]>;
 }
 
 // 创建 Store
 export const useAntigravityAccount = create<AntigravityAccountState & AntigravityAccountActions>()((set, get) => ({
   // 初始状态
-  users: [],
+  accounts: [],
   currentAuthInfo: null,
 
   // ============ 基础操作 ============
@@ -47,7 +46,7 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
 
       // 删除成功后重新获取数据
       const accounts = await AccountCommands.getAccounts();
-      set({ users: accounts });
+      set({ accounts: accounts });
 
       logger.info('用户删除成功', { module: 'UserManagement', email, remainingUsers: accounts.length });
     } catch (error) {
@@ -60,7 +59,7 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
     }
   },
 
-  insertOrUpdateCurrent: async (): Promise<void> => {
+  insertOrUpdateCurrentAccount: async (): Promise<void> => {
     logger.info('开始备份当前用户', { module: 'UserManagement' });
 
     try {
@@ -89,7 +88,7 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
 
         // 6. 重新获取用户列表
         const accounts = await AccountCommands.getAccounts();
-        set({ users: accounts });
+        set({ accounts: accounts });
 
         logger.info('当前用户备份成功', {
           module: 'UserManagement',
@@ -114,7 +113,7 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
     }
   },
 
-  switchUser: async (email: string): Promise<void> => {
+  switchToAccount: async (email: string): Promise<void> => {
     logger.info('开始切换用户', { module: 'UserManagement', email });
 
     try {
@@ -144,16 +143,16 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
 
   // ============ 批量操作 ============
 
-  clearAllUsers: async (): Promise<void> => {
+  clearAllAccounts: async (): Promise<void> => {
     // 调用清空所有备份的命令
     await BackupCommands.clearAll();
     // 清空成功后重新获取数据
     const accounts = await AccountCommands.getAccounts();
-    set({ users: accounts });
+    set({ accounts: accounts });
   },
 
   // ============ 查询 ============
-  getUsers: async (): Promise<AntigravityAccount[]> => {
+  getAccounts: async (): Promise<AntigravityAccount[]> => {
     logger.info('获取用户列表', { module: 'UserManagement' });
 
     try {
@@ -161,7 +160,7 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
       const accounts = await AccountCommands.getAccounts();
 
       // 同步更新 store 中的状态
-      set({ users: accounts });
+      set({ accounts: accounts });
 
       logger.info('获取用户列表成功', { module: 'UserManagement', userCount: accounts.length });
       return accounts;
@@ -171,18 +170,9 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
         error: error instanceof Error ? error.message : String(error)
       });
       // 如果读取失败，返回当前 store 中的用户
-      return get().users;
+      return get().accounts;
     }
-  },
-
-  searchUsers: (keyword: string): AntigravityAccount[] => {
-    if (!keyword.trim()) return get().users;
-
-    const lowerKeyword = keyword.toLowerCase();
-    return get().users.filter(user =>
-      user.email.toLowerCase().includes(lowerKeyword)
-    );
   },
 }));
 
-export const useCurrentAntigravityAccount: () => AntigravityAccount | undefined = () => useAntigravityAccount(state => state.users.find(user => user.email === state.currentAuthInfo?.email));
+export const useCurrentAntigravityAccount: () => AntigravityAccount | undefined = () => useAntigravityAccount(state => state.accounts.find(user => user.email === state.currentAuthInfo?.email));

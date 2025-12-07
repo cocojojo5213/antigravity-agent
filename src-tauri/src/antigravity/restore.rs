@@ -95,39 +95,39 @@ fn restore_database(
     }
 
     // 2. 恢复通知字段（避免历史通知重复弹窗）
-    if let Some(notification_keys_value) = backup_data.get("notification_keys") {
-        if let Some(notification_keys) = notification_keys_value.as_array() {
-            if !notification_keys.is_empty() {
-                tracing::debug!(target: "restore::database", notification_count = %notification_keys.len(), "开始恢复通知字段");
-                let mut notification_count = 0;
-
-                for notification_key_value in notification_keys {
-                    if let Some(notification_key) = notification_key_value.as_str() {
-                        // 查找对应的通知数据
-                        if let Some(notification_data) = backup_data.get(notification_key) {
-                            if let Some(notification_str) = notification_data.as_str() {
-                                match conn.execute(
-                                    "INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)",
-                                    params![notification_key, notification_str],
-                                ) {
-                                    Ok(_) => {
-                                        tracing::debug!(target: "restore::database", key = %notification_key, "恢复通知成功");
-                                        notification_count += 1;
-                                        // 通知字段不添加到 restored_keys 中，因为它们通常不需要参与 Marker 同步
-                                    }
-                                    Err(e) => {
-                                        tracing::error!(target: "restore::database", key = %notification_key, error = %e, "恢复通知失败");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                tracing::info!(target: "restore::database", notification_count = %notification_count, "成功恢复通知字段");
-            }
-        }
-    }
+    // if let Some(notification_keys_value) = backup_data.get("notification_keys") {
+    //     if let Some(notification_keys) = notification_keys_value.as_array() {
+    //         if !notification_keys.is_empty() {
+    //             tracing::debug!(target: "restore::database", notification_count = %notification_keys.len(), "开始恢复通知字段");
+    //             let mut notification_count = 0;
+    //
+    //             for notification_key_value in notification_keys {
+    //                 if let Some(notification_key) = notification_key_value.as_str() {
+    //                     // 查找对应的通知数据
+    //                     if let Some(notification_data) = backup_data.get(notification_key) {
+    //                         if let Some(notification_str) = notification_data.as_str() {
+    //                             match conn.execute(
+    //                                 "INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)",
+    //                                 params![notification_key, notification_str],
+    //                             ) {
+    //                                 Ok(_) => {
+    //                                     tracing::debug!(target: "restore::database", key = %notification_key, "恢复通知成功");
+    //                                     notification_count += 1;
+    //                                     // 通知字段不添加到 restored_keys 中，因为它们通常不需要参与 Marker 同步
+    //                                 }
+    //                                 Err(e) => {
+    //                                     tracing::error!(target: "restore::database", key = %notification_key, error = %e, "恢复通知失败");
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //
+    //             tracing::info!(target: "restore::database", notification_count = %notification_count, "成功恢复通知字段");
+    //         }
+    //     }
+    // }
 
     // 3. 智能合并 Marker
     if !restored_keys.is_empty() {

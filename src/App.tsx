@@ -28,7 +28,7 @@ function App() {
     dbMonitoringActions.initializeMonitoring();
 
     // 添加事件监听器
-    return dbMonitoringActions.addListener(DATABASE_EVENTS.DATA_CHANGED, antigravityAccount.insertOrUpdateCurrent);
+    return dbMonitoringActions.addListener(DATABASE_EVENTS.DATA_CHANGED, antigravityAccount.insertOrUpdateCurrentAccount);
   }, []);
 
   // 启动 Antigravity 进程状态自动检查
@@ -39,7 +39,6 @@ function App() {
     return () => antigravityIsRunning.stopAutoCheck();
   }, []);
 
-  
   // ========== 初始化启动流程 ==========
   const initializeApp = async () => {
     try {

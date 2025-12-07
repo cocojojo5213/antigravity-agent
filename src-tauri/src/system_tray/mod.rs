@@ -1,11 +1,10 @@
 //! 系统托盘管理模块
 //!
-//! 负责系统托盘的生命周期管理、菜单构建和事件处理。
-//! 使用 AppSettingsManager 进行状态持久化。
+//! 使用 Tauri 2.9 内置 API 实现后端控制托盘，前端通过命令更新菜单
 
-pub mod events;
 pub mod manager;
-pub mod menu;
+pub mod tray;
 
-// Re-export the main struct for convenience
+// Re-export the main structs for convenience
 pub use manager::SystemTrayManager;
+pub use tray::{create_tray_with_return, update_tray_menu};

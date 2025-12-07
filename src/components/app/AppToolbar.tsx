@@ -146,7 +146,7 @@ const AppToolbar = () => {
   const handleSubmitImportPassword = (password: string) => {
     importExportAccount.submitImportPassword(password)
     .then(() => {
-      antigravityAccount.getUsers()
+      antigravityAccount.getAccounts()
     })
   };
 
@@ -195,8 +195,8 @@ const AppToolbar = () => {
                 onClick={handleExportConfig}
                 variant="secondary"
                 icon={<Download className="h-4 w-4" />}
-                tooltip={antigravityAccount.users.length > 0 ? "导出为加密配置文件" : "没有用户信息可以导出"}
-                disabled={antigravityAccount.users.length === 0}
+                tooltip={antigravityAccount.accounts.length > 0 ? "导出为加密配置文件" : "没有用户信息可以导出"}
+                disabled={antigravityAccount.accounts.length === 0}
                 isLoading={isExporting || isCheckingData}
                 loadingText={isCheckingData ? "检查中..." : "导出中..."}
                 isAnyLoading={isAnyLoading}
