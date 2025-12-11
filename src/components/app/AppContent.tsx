@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import type {AntigravityAccountData} from "@/commands/types/account.types.ts";
+import type {AntigravityAccount} from "@/commands/types/account.types.ts";
 import BusinessUserDetail from "@/components/business/AccountDetailModal.tsx";
 import {useAntigravityAccount, useCurrentAntigravityAccount} from "@/modules/use-antigravity-account.ts";
 import {useAvailableModels} from "@/modules/use-available-models.ts";
@@ -13,7 +13,7 @@ import {AccountSessionList, AccountSessionListAccountItem} from "@/components/bu
 
 export function AppContent() {
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AntigravityAccountData | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AntigravityAccount | null>(null);
   const antigravityAccount = useAntigravityAccount();
   const availableModels = useAvailableModels();
   const currentAntigravityAccount = useCurrentAntigravityAccount();

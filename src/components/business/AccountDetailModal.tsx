@@ -1,16 +1,15 @@
 import React, {useState} from 'react';
-import {Check, Clock, Copy, Key, User} from 'lucide-react';
-import type {AntigravityAccountData} from '@/commands/types/account.types';
+import {Check, Copy, Key, User} from 'lucide-react';
+import type {AntigravityAccount} from '@/commands/types/account.types';
 import {BaseButton} from '@/components/base-ui/BaseButton';
 import {cn} from '@/utils/utils';
 import {logger} from '@/utils/logger';
 import {Modal} from "antd";
-import {maskEmail} from "@/utils/string-masking.ts";
 
 interface BusinessUserDetailProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  user: AntigravityAccountData | null;
+  user: AntigravityAccount | null;
 }
 
 const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({

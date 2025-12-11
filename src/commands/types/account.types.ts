@@ -1,6 +1,6 @@
 
 // Antigravity 当前用户信息类型
-export interface AntigravityAccountData {
+export interface AntigravityAccount {
   auth: Auth
   context: Context
   f11_base64: string

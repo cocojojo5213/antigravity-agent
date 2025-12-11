@@ -96,6 +96,9 @@
               "allow": [
                 {
                   "url": "https://daily-cloudcode-pa.sandbox.googleapis.com"
+                },
+                {
+                  "url": "https://oauth2.googleapis.com/token"
                 }
               ]
             }

@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {logger} from '../utils/logger.ts';
 import {AccountCommands} from '@/commands/AccountCommands.ts';
-import type {AntigravityAccountData} from '@/commands/types/account.types.ts';
+import type {AntigravityAccount} from '@/commands/types/account.types.ts';
 import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";
 
 // 常量定义
@@ -9,8 +9,8 @@ const FILE_WRITE_DELAY_MS = 500; // 等待文件写入完成的延迟时间
 
 // Store 状态
 export interface AntigravityAccountState {
-  accounts: AntigravityAccountData[];
-  currentAuthInfo: AntigravityAccountData | null;
+  accounts: AntigravityAccount[];
+  currentAuthInfo: AntigravityAccount | null;
 }
 
 // Store Actions
@@ -24,7 +24,7 @@ export interface AntigravityAccountActions {
   clearAllAccounts: () => Promise<void>;
 
   // 查询
-  getAccounts: () => Promise<AntigravityAccountData[]>;
+  getAccounts: () => Promise<AntigravityAccount[]>;
 }
 
 // 创建 Store
@@ -54,7 +54,7 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
   insertOrUpdateCurrentAccount: async (): Promise<void> => {
     try {
       // 1. 获取当前 Antigravity 用户信息
-      const currentInfo = await AccountCommands.getCurrentInfo();
+      const currentInfo = await AccountCommands.getCurrentAntigravityAccount();
       // 2. 检查是否有有效的用户信息（通过API Key或用户状态判断）
       if (currentInfo?.auth.access_token) {
         // 3. 执行备份操作
@@ -106,7 +106,7 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
   },
 
   // ============ 查询 ============
-  getAccounts: async (): Promise<AntigravityAccountData[]> => {
+  getAccounts: async (): Promise<AntigravityAccount[]> => {
     try {
       // 从后端获取账户列表
       const accounts = await AccountCommands.getAntigravityAccounts();
@@ -125,4 +125,4 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
   },
 }));
 
-export const useCurrentAntigravityAccount: () => AntigravityAccountData | undefined = () => useAntigravityAccount(state => state.accounts.find(user => user.context.email === state.currentAuthInfo?.context.email));
+export const useCurrentAntigravityAccount: () => AntigravityAccount | undefined = () => useAntigravityAccount(state => state.accounts.find(user => user.context.email === state.currentAuthInfo?.context.email));

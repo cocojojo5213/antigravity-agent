@@ -362,5 +362,13 @@ export namespace CloudCodeAPITypes {
     noticeText?: string
   }
 
+  export interface RefreshAccessTokenResponse {
+    access_token: string;
+    expires_in: number;
+    scope: string;
+    token_type: string; // 或者写成字面量类型 'Bearer'
+    id_token: string;   // 这是一个 JWT (Json Web Token)
+  }
+
 }
 
