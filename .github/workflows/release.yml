@@ -50,16 +50,16 @@ jobs:
             ## 📥 下载安装
 
             ### Windows
-            - **安装版**（推荐）: [Antigravity Agent_${{ steps.version.outputs.version }}_x64-setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity%20Agent_${{ steps.version.outputs.version }}_x64-setup.exe) - 支持自动更新
+            - **安装版**（推荐）: [Antigravity.Agent_x64-setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity.Agent_x64-setup.exe) - 支持更新
             - **便携版**: [Antigravity-Agent-x86_64-Portable.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity-Agent-x86_64-Portable.zip) - 解压即用，无需安装
             
             ### macOS
-            - **Apple Silicon (M1/M2)**: [Antigravity Agent_${{ steps.version.outputs.version }}_aarch64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity%20Agent_${{ steps.version.outputs.version }}_aarch64.dmg)
-            - **Intel Mac**: [Antigravity Agent_${{ steps.version.outputs.version }}_x86_64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity%20Agent_${{ steps.version.outputs.version }}_x86_64.dmg)
+            - **Apple Silicon (M1/M2)**: [Antigravity.Agent_aarch64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity.Agent_aarch64.dmg)
+            - **Intel Mac**: [Antigravity.Agent_x86_64.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity.Agent_x86_64.dmg)
             
             ### Linux
-            - **AppImage**: [antigravity-agent_${{ steps.version.outputs.version }}_amd64.AppImage](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_${{ steps.version.outputs.version }}_amd64.AppImage) - 通用格式，适用于所有发行版
-            - **Debian/Ubuntu**: [antigravity-agent_${{ steps.version.outputs.version }}_amd64.deb](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_${{ steps.version.outputs.version }}_amd64.deb)
+            - **AppImage**: [antigravity-agent_amd64.AppImage](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_amd64.AppImage) - 通用格式，适用于所有发行版
+            - **Debian/Ubuntu**: [antigravity-agent_amd64.deb](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_amd64.deb)
             ---
 
             ## 📋 更新日志
