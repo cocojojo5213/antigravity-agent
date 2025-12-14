@@ -33,6 +33,12 @@ sysinfo = "0.30"
 prost = "0.12"
 log = "0.4.28"
 
+# Crypto (用于导入/导出配置文件的强加密)
+aes-gcm = "0.10"
+pbkdf2 = "0.12"
+sha2 = "0.10"
+rand = "0.8"
+
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
 prost-build = "0.12"

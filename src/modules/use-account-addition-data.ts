@@ -1,4 +1,4 @@
-﻿import {create} from "zustand";
+import {create} from "zustand";
 import {AntigravityAccount} from "@/commands/types/account.types.ts";
 import {CloudCodeAPI} from "@/services/cloudcode-api.ts";
 import {CloudCodeAPITypes} from "@/services/cloudcode-api.types.ts";
@@ -43,10 +43,15 @@ export const useAccountAdditionData = create<State & Actions>((setState, getStat
       if (antigravityAccount.context.email === currentAccount?.context.email && isAntigravityRunning) {
         return
       }
-      // 刷新 access token
-      const refreshTokenResponse = await CloudCodeAPI.refreshAccessToken(antigravityAccount.auth.id_token);
-      // 更新一下内存里面的 access token, 这里就不写入本地了
-      antigravityAccount.auth.access_token = refreshTokenResponse.access_token;
+      try {
+        // 刷新 access token
+        const refreshTokenResponse = await CloudCodeAPI.refreshAccessToken(antigravityAccount.auth.id_token);
+        // 更新一下内存里面的 access token, 这里就不写入本地了
+        antigravityAccount.auth.access_token = refreshTokenResponse.access_token;
+      } catch {
+        // 刷新失败（例如缺少 OAuth client 配置/refresh token 无效），终止本次附加数据拉取
+        return
+      }
     }
 
     // 先模糊匹配下 tier 的定义, 因为我也知不道具体是啥

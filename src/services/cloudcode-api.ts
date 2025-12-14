@@ -1,4 +1,4 @@
-﻿import {fetch} from '@tauri-apps/plugin-http'
+import {fetch} from '@tauri-apps/plugin-http'
 import {CloudCodeAPITypes} from "@/services/cloudcode-api.types.ts";
 
 // HTTP 客户端配置
@@ -15,6 +15,22 @@ const HTTP_CONFIG: HTTPConfig = {
     "Accept": "application/json"
   }
 };
+
+const GOOGLE_OAUTH_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
+
+function getGoogleOAuthClientCredentials(): { clientId: string; clientSecret?: string } {
+  const clientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string | undefined;
+  const clientSecret = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET as string | undefined;
+
+  if (!clientId) {
+    throw new Error('Missing VITE_GOOGLE_OAUTH_CLIENT_ID (Google OAuth client_id)');
+  }
+
+  return {
+    clientId,
+    clientSecret: clientSecret || undefined,
+  };
+}
 
 
 const post = async <T>(endpoint: string, data: any, options?: RequestInit): Promise<T> => {
@@ -86,35 +102,30 @@ export namespace CloudCodeAPI {
     return response;
   }
 
-  /**
-   * curl --request POST \
-   *   --url https://oauth2.googleapis.com/token \
-   *   --header 'content-type: application/x-www-form-urlencoded' \
-   *   --data client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com \
-   *   --data client_secret=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 \
-   *   --data grant_type=refresh_token \
-   *   --data refresh_token=<>
-   * @param refresh_token
-   */
   export async function refreshAccessToken(
     refresh_token: string,
   ) {
-    const requestData = {
-      "client_id": "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-      "client_secret": "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",
-      "grant_type": "refresh_token",
-      "refresh_token": refresh_token
-    };
+    const { clientId, clientSecret } = getGoogleOAuthClientCredentials();
 
-    const requestConfig: RequestInit = {
-      method: 'POST',
-      body: JSON.stringify(requestData)
-    };
+    const body = new URLSearchParams({
+      client_id: clientId,
+      grant_type: 'refresh_token',
+      refresh_token,
+    });
 
+    if (clientSecret) {
+      body.set('client_secret', clientSecret);
+    }
 
     const response = await fetch(
-      'https://oauth2.googleapis.com/token',
-      requestConfig,
+      GOOGLE_OAUTH_TOKEN_ENDPOINT,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+      },
     );
     const json = await response.json() as unknown as CloudCodeAPITypes.RefreshAccessTokenResponse | CloudCodeAPITypes.ErrorResponse;
 

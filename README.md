@@ -35,6 +35,17 @@ Linux ✅️
 - **导出**: 选择保存位置，设置密码，导出所有账户配置
 - **导入**: 选择配置文件，输入密码，恢复账户数据
 
+### （可选）配置 Google OAuth 刷新（用于配额/头像信息获取）
+出于安全审计考虑，项目不再在源码中内置 Google OAuth 的 `client_id/client_secret`。
+如需启用 token refresh，请在本地构建时配置环境变量：
+
+1. 复制 `.env.example` 为 `.env`
+2. 填写：
+   - `VITE_GOOGLE_OAUTH_CLIENT_ID`
+   - `VITE_GOOGLE_OAUTH_CLIENT_SECRET`（如你的 OAuth client 需要；如不需要可留空）
+
+> 注意：对于分发型桌面应用，`client_secret` 无法做到真正保密。更推荐使用 PKCE 等“公有客户端”流程。
+
 ## 🐛 Bug 反馈
 
 遇到问题时，请按照以下步骤提供日志以便快速定位和解决问题：

@@ -31,6 +31,24 @@ pub struct FailedAccountExportedData {
     error: String,
 }
 
+const CONFIG_ENCRYPTION_VERSION: u8 = 2;
+const PBKDF2_ITERATIONS: u32 = 210_000;
+const PBKDF2_SALT_LEN: usize = 16;
+const AES_GCM_NONCE_LEN: usize = 12;
+
+#[derive(Serialize, Deserialize, Debug)]
+struct EncryptedConfigEnvelopeV2 {
+    v: u8,
+    kdf: String,
+    iter: u32,
+    #[serde(rename = "salt")]
+    salt_b64: String,
+    #[serde(rename = "nonce")]
+    nonce_b64: String,
+    #[serde(rename = "ciphertext")]
+    ciphertext_b64: String,
+}
+
 /// 收集所有账户文件的完整内容, 用于导出
 #[tauri::command]
 pub async fn collect_account_contents(
@@ -181,29 +199,123 @@ pub async fn clear_all_backups(state: State<'_, crate::AppState>) -> Result<Stri
     }
 }
 
+fn derive_config_key_pbkdf2(password: &[u8], salt: &[u8], iterations: u32) -> [u8; 32] {
+    use pbkdf2::pbkdf2_hmac;
+    use sha2::Sha256;
+
+    let mut key = [0u8; 32];
+    pbkdf2_hmac::<Sha256>(password, salt, iterations, &mut key);
+    key
+}
+
+fn encrypt_config_data_v2(json_data: &str, password: &str) -> Result<String, String> {
+    use aes_gcm::aead::Aead;
+    use aes_gcm::KeyInit;
+    use aes_gcm::{Aes256Gcm, Nonce};
+    use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+    use rand::RngCore;
+
+    let mut salt = [0u8; PBKDF2_SALT_LEN];
+    rand::rngs::OsRng.fill_bytes(&mut salt);
+
+    let mut nonce_bytes = [0u8; AES_GCM_NONCE_LEN];
+    rand::rngs::OsRng.fill_bytes(&mut nonce_bytes);
+
+    let key = derive_config_key_pbkdf2(password.as_bytes(), &salt, PBKDF2_ITERATIONS);
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| "加密失败".to_string())?;
+
+    let ciphertext = cipher
+        .encrypt(Nonce::from_slice(&nonce_bytes), json_data.as_bytes())
+        .map_err(|_| "加密失败".to_string())?;
+
+    let envelope = EncryptedConfigEnvelopeV2 {
+        v: CONFIG_ENCRYPTION_VERSION,
+        kdf: "pbkdf2-sha256".to_string(),
+        iter: PBKDF2_ITERATIONS,
+        salt_b64: BASE64.encode(salt),
+        nonce_b64: BASE64.encode(nonce_bytes),
+        ciphertext_b64: BASE64.encode(ciphertext),
+    };
+
+    serde_json::to_string(&envelope).map_err(|_| "加密失败".to_string())
+}
+
+fn decrypt_config_data_v2(encrypted_data: &str, password: &str) -> Result<String, String> {
+    use aes_gcm::aead::Aead;
+    use aes_gcm::KeyInit;
+    use aes_gcm::{Aes256Gcm, Nonce};
+    use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+
+    let envelope: EncryptedConfigEnvelopeV2 =
+        serde_json::from_str(encrypted_data).map_err(|_| "解密失败，数据格式无效".to_string())?;
+
+    if envelope.v != CONFIG_ENCRYPTION_VERSION {
+        return Err("解密失败，不支持的加密版本".to_string());
+    }
+
+    if envelope.kdf != "pbkdf2-sha256" {
+        return Err("解密失败，不支持的 KDF".to_string());
+    }
+
+    // 防止被构造的极端参数拖慢解密
+    if envelope.iter < 10_000 || envelope.iter > 10_000_000 {
+        return Err("解密失败，不支持的 KDF 参数".to_string());
+    }
+
+    let salt = BASE64
+        .decode(envelope.salt_b64)
+        .map_err(|_| "解密失败，salt 无效".to_string())?;
+    let nonce_bytes = BASE64
+        .decode(envelope.nonce_b64)
+        .map_err(|_| "解密失败，nonce 无效".to_string())?;
+    let ciphertext = BASE64
+        .decode(envelope.ciphertext_b64)
+        .map_err(|_| "解密失败，密文无效".to_string())?;
+
+    if salt.len() != PBKDF2_SALT_LEN || nonce_bytes.len() != AES_GCM_NONCE_LEN {
+        return Err("解密失败，数据格式无效".to_string());
+    }
+
+    let key = derive_config_key_pbkdf2(password.as_bytes(), &salt, envelope.iter);
+    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| "解密失败".to_string())?;
+
+    let plaintext = cipher
+        .decrypt(Nonce::from_slice(&nonce_bytes), ciphertext.as_ref())
+        .map_err(|_| "解密失败，密码错误或数据已损坏".to_string())?;
+
+    String::from_utf8(plaintext).map_err(|_| "解密失败，数据可能已损坏".to_string())
+}
+
+fn decrypt_config_data_legacy_xor_base64(
+    encrypted_data: String,
+    password: String,
+) -> Result<String, String> {
+    use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+
+    let decoded = BASE64
+        .decode(encrypted_data)
+        .map_err(|_| "Base64 解码失败".to_string())?;
+
+    let password_bytes = password.as_bytes();
+    let mut result = Vec::with_capacity(decoded.len());
+
+    for (i, byte) in decoded.iter().enumerate() {
+        let key_byte = password_bytes[i % password_bytes.len()];
+        result.push(byte ^ key_byte);
+    }
+
+    String::from_utf8(result).map_err(|_| "解密失败，数据可能已损坏".to_string())
+}
+
 /// 加密配置数据（用于账户导出）
 #[tauri::command]
 pub async fn encrypt_config_data(json_data: String, password: String) -> Result<String, String> {
     log_async_command!("encrypt_config_data", async {
-        use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-
         if password.is_empty() {
             return Err("密码不能为空".to_string());
         }
 
-        let password_bytes = password.as_bytes();
-        let mut result = Vec::new();
-
-        // XOR 加密
-        for (i, byte) in json_data.as_bytes().iter().enumerate() {
-            let key_byte = password_bytes[i % password_bytes.len()];
-            result.push(byte ^ key_byte);
-        }
-
-        // Base64 编码
-        let encoded = BASE64.encode(&result);
-
-        Ok(encoded)
+        encrypt_config_data_v2(&json_data, &password)
     })
 }
 
@@ -214,28 +326,20 @@ pub async fn decrypt_config_data(
     password: String,
 ) -> Result<String, String> {
     log_async_command!("decrypt_config_data", async {
-        use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-
         if password.is_empty() {
             return Err("密码不能为空".to_string());
         }
 
-        let decoded = BASE64
-            .decode(encrypted_data)
-            .map_err(|_| "Base64 解码失败".to_string())?;
+        let trimmed = encrypted_data.trim();
 
-        let password_bytes = password.as_bytes();
-        let mut result = Vec::new();
-
-        for (i, byte) in decoded.iter().enumerate() {
-            let key_byte = password_bytes[i % password_bytes.len()];
-            result.push(byte ^ key_byte);
+        if trimmed.starts_with('{') {
+            // v2 加密格式：JSON envelope
+            if serde_json::from_str::<EncryptedConfigEnvelopeV2>(trimmed).is_ok() {
+                return decrypt_config_data_v2(trimmed, &password);
+            }
         }
 
-        let decrypted =
-            String::from_utf8(result).map_err(|_| "解密失败，数据可能已损坏".to_string())?;
-
-        Ok(decrypted)
+        decrypt_config_data_legacy_xor_base64(encrypted_data, password)
     })
 }
 
