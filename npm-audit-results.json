@@ -1,0 +1,23 @@
+npm warn Unknown env config "python". This will stop working in the next major version of npm.
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {},
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 189,
+      "dev": 360,
+      "optional": 81,
+      "peer": 23,
+      "peerOptional": 0,
+      "total": 555
+    }
+  }
+}
